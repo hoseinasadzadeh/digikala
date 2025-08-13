@@ -81,7 +81,7 @@ def proccess_order(request):
 
         full_name = user_shipping['shipping_fullName']
         email = user_shipping['shipping_email']
-        shipping_address = f'{user_shipping['shipping_country']} - {user_shipping['shipping_city']} - {user_shipping['shipping_state']} - {user_shipping['shipping_address2']} - {user_shipping['shipping_address1']}'
+        shipping_address = f"{user_shipping['shipping_country']} - {user_shipping['shipping_city']} - {user_shipping['shipping_state']} - {user_shipping['shipping_address2']} - {user_shipping['shipping_address1']}"
 
         if request.user.is_authenticated:
             user = request.user
