@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load humanize %}
+
+<div class="cartBasket container py-5">
+	<h1 class="mb-5">اطلاعات ارسال</h1>
+	<div class="row">
+		<div class="col-lg-8">
+			<div class="card mb-3">
+				<div class="card-header p-3">
+					انتخاب آدرس تحویل سفارش
+				</div>
+				<div class="card-body">
+					<div class="card-body card-products-list">
+						<ul class="list-group">
+							<li class="list-group-item d-flex justify-content-between align-items-center">
+								نام و نام خانوادگی
+								<span
+									class="badge text-bg-primary rounded-pill">{{shipping_info.shipping_fullName}}</span>
+							</li>
+							<li class="list-group-item d-flex justify-content-between align-items-center">
+								موبایل
+								<span class="badge text-bg-primary rounded-pill">{{shipping_info.shipping_phone}}</span>
+							</li>
+							<li class="list-group-item d-flex justify-content-between align-items-center">
+								آدرس
+								<span
+									class="badge text-bg-primary rounded-pill">{{shipping_info.shipping_address1}}</span>
+							</li>
+							<li class="list-group-item d-flex justify-content-between align-items-center">
+								شهر
+								<span class="badge text-bg-primary rounded-pill">{{shipping_info.shipping_city}}</span>
+							</li>
+							<li class="list-group-item d-flex justify-content-between align-items-center">
+								منطقه
+								<span class="badge text-bg-primary rounded-pill">{{shipping_info.shipping_state}}</span>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="col-lg-4">
+			<div class="card cart-summary">
+				<div class="card-body p-4">
+					<div class="d-flex justify-content-between mb-3">
+						<span>جمع فاکتور</span>
+						<span id="total_price">{{ total|floatformat:0|intcomma }} تومان</span>
+					</div>
+					<div class="d-flex justify-content-between mb-3">
+						<span>هزینه ارسال</span>
+						<span>0</span>
+					</div>
+					<div class="d-flex justify-content-between mb-3">
+						<span>مالیات</span>
+						<span>0</span>
+					</div>
+					<hr />
+					<div class="d-flex justify-content-between" data-product-id="{{ product.id }}">
+						<strong>جمع کل</strong>
+						<strong id="cart_total">{{ total|floatformat:0|intcomma }} تومان</strong>
+					</div>
+				</div>
+			</div>
+			<form method="POST" action="{% url 'proccess' %}">
+
+				{% csrf_token %}
+				<button type="submit" class=" btn btn-primary w-100 mt-3">پرداخت</button>
+			</form>
+			<a href="{% url 'shipping' %}" class="btn btn-outline-secondary w-100 mt-3">بازگشت</a>
+		</div>
+	</div>
+</div>
+<script>
+	function formatNumber(number) {
+		return number.toString()
+			.replace(/\D/g, "")
+			.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+	}
+	$(document).ready(function () {
+		$(document).on('click', '.remove-item', function () {
+			if (confirm('آیا از حذف این کالا اطمینان دارید؟')) {
+				removeItem($(this).data('product-id'));
+			}
+		});
+	});
+	// تابع حذف آیتم
+	function removeItem(productId) {
+		$.ajax({
+			url: '{% url "cart_delete" %}',
+			type: 'POST',
+			data: {
+				product_id: productId,
+				csrfmiddlewaretoken: '{{ csrf_token }}'
+			},
+			dataType: 'json',
+			success: function (response) {
+				// حذف ردیف از جدول
+				$(`[data-product-id="${productId}"]`).remove();
+				// به‌روزرسانی جمع کل
+				$('#cart_total').text(formatNumber(response.total_price));
+				$('#total_price').text(formatNumber(response.total_price));
+				$('#cart_quantity').text(response.cart_count);
+				showToast('محصول از سبد خرید حذف شد', 'redToast');
+				if (response.cart_count === 0) {
+					const emptyCartHTML = `
+						<div class="row cart-item emptyCart mb-3">
+							<div class="container col-md-12 text-center">
+								<img src="/static/img/empty-cart.svg" />
+								<h4>سبد خرید شما خالی است!</h4>
+							</div>
+						</div>`;
+
+					$('.card-products-list').prepend(emptyCartHTML);
+				}
+			},
+			error: function (xhr) {
+				showToast('خطا در حذف محصول', 'error');
+			}
+		});
+	}
+</script>
+{% endblock %}
