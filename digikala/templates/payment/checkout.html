@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load humanize %}
+
+<div class="cartBasket container py-5">
+	<h1 class="mb-5">صورتحساب</h1>
+	<div class="row">
+		<div class="col-lg-8">
+			<div class="card mb-3">
+				<div class="card-header p-3">
+					بازبینی سفارش
+				</div>
+				<div class="card-body">
+					<div class="card-body card-products-list">
+						{% if cart_products %}
+
+						{% for product in cart_products %}
+						<div class="row cart-item mb-3" data-product-id="{{product.id}}">
+							<div class="col-md-2">
+								<a href="{% url 'product' product.id %}"><img src="{{ product.product_image.url }}"
+										alt="Product 1" class="img-fluid" /></a>
+							</div>
+							<div class="col-md-5">
+								<a href="{% url 'product' product.id %}">
+									<h5 class="card-title">{{ product.product_name }}</h5>
+								</a>
+							</div>
+							<div class="col-md-2">
+								{% for key, value in qty.items %}
+								{% if key == product.id|slugify %}
+								{{ value.qty }} عدد
+								{% endif %}
+								{% endfor %}
+							</div>
+							<div class="col-md-2 text-end">
+								<p class="fw-bold">{{ product.product_price|intcomma }}</p>
+							</div>
+							<div class="col-md-1 text-end">
+								<button class="btn btn-sm btn-outline-danger remove-item"
+									data-product-id="{{ product.id }}"><i class="bi bi-trash"></i></button>
+							</div>
+						</div>
+						{% endfor %}
+						{% else %}
+						<div class="row cart-item emptyCart mb-3">
+							<div class="container col-md-12 text-center">
+								<img src="../../static/img/empty-cart.svg" />
+								<h4>سبد خرید شما خالی است!</h4>
+							</div>
+						</div>
+						{% endif %}
+					</div>
+				</div>
+			</div>
+			<div class="card cart-summary">
+				<div class="card-body p-4">
+					<div class="d-flex justify-content-between mb-3">
+						<span>جمع فاکتور</span>
+						<span id="total_price">{{ total|floatformat:0|intcomma }} تومان</span>
+					</div>
+					<div class="d-flex justify-content-between mb-3">
+						<span>هزینه ارسال</span>
+						<span>0</span>
+					</div>
+					<div class="d-flex justify-content-between mb-3">
+						<span>مالیات</span>
+						<span>0</span>
+					</div>
+					<hr />
+					<div class="d-flex justify-content-between" data-product-id="{{ product.id }}">
+						<strong>جمع کل</strong>
+						<strong id="cart_total">{{ total|floatformat:0|intcomma }} تومان</strong>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="col-lg-4">
+			<div class="card">
+				<div class="card-body">
+					<h5 class="card-title mb-3">کد تخفیف</h5>
+					<div class="input-group mb-3">
+						<input type="text" class="form-control" placeholder="کد تخفیف را وارد کنید" />
+						<button class="btn btn-outline-secondary" type="button">ثبت کد تخفیف</button>
+					</div>
+				</div>
+			</div>
+
+			<a href="{% url 'shipping' %}"><button class=" btn btn-primary w-100 mt-3">اطلاعات ارسال</button>
+			</a>
+			<a href="{% url 'cart_summary' %}" class="btn btn-outline-secondary w-100 mt-2">بازگشت</a>
+		</div>
+	</div>
+</div>
+<script>
+	function formatNumber(number) {
+		return number.toString()
+			.replace(/\D/g, "")
+			.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+	}
+	$(document).ready(function () {
+		$(document).on('click', '.remove-item', function () {
+			if (confirm('آیا از حذف این کالا اطمینان دارید؟')) {
+				removeItem($(this).data('product-id'));
+			}
+		});
+	});
+	// تابع حذف آیتم
+	function removeItem(productId) {
+		$.ajax({
+			url: '{% url "cart_delete" %}',
+			type: 'POST',
+			data: {
+				product_id: productId,
+				csrfmiddlewaretoken: '{{ csrf_token }}'
+			},
+			dataType: 'json',
+			success: function (response) {
+				// حذف ردیف از جدول
+				$(`[data-product-id="${productId}"]`).remove();
+				// به‌روزرسانی جمع کل
+				$('#cart_total').text(formatNumber(response.total_price));
+				$('#total_price').text(formatNumber(response.total_price));
+				$('#cart_quantity').text(response.cart_count);
+				showToast('محصول از سبد خرید حذف شد', 'redToast');
+				if (response.cart_count === 0) {
+					const emptyCartHTML = `
+						<div class="row cart-item emptyCart mb-3">
+							<div class="container col-md-12 text-center">
+								<img src="/static/img/empty-cart.svg" />
+								<h4>سبد خرید شما خالی است!</h4>
+							</div>
+						</div>`;
+
+					$('.card-products-list').prepend(emptyCartHTML);
+				}
+			},
+			error: function (xhr) {
+				showToast('خطا در حذف محصول', 'error');
+			}
+		});
+	}
+</script>
+{% endblock %}

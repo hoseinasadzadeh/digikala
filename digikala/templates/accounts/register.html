@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load humanize %}
+
+<header class="bg-dark py-5">
+	<div class="container px-4 px-lg-5 my-5">
+		<div class="text-center text-white">
+			<h1 class="display-4 fw-bolder">ثبت نام کنید</h1>
+			<p class="lead fw-normal text-white-50 mb-0">
+				از طریق فرم زیر ثبت نام کنید
+			</p>
+		</div>
+	</div>
+</header>
+<div class="container">
+	<div class="row">
+		<center>
+			<div class="col-4 p-4">
+				<form method="POST" action="{% url 'register' %}" novalidate>
+					{% csrf_token %}
+					{{form.as_p}}
+					<button type=" submit" class="btn btn-primary">ثبت نام</button>
+				</form>
+			</div>
+		</center>
+	</div>
+</div>
+{% endblock content %}

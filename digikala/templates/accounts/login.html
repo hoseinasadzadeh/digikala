@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load humanize %}
+
+<header class="bg-dark py-5">
+	<div class="container px-4 px-lg-5 my-5">
+		<div class="text-center text-white">
+			<h1 class="display-4 fw-bolder">ورود</h1>
+			<p class="lead fw-normal text-white-50 mb-0">
+				از طریق فرم زیر وارد شوید
+			</p>
+		</div>
+	</div>
+</header>
+<div class="container">
+	<div class="row">
+		<center>
+			<div class="col-4 p-4">
+				<form method="POST" action="{% url 'login' %}">
+					{% csrf_token %}
+					<div class="mb-3">
+						<label for="exampleInputEmail1" class="form-label">نام کاربری</label>
+						<input type="text" class="form-control" name="username" placeholder="نام کاربری را وارد کنید">
+					</div>
+					<div class="mb-3">
+						<label for="exampleInputPassword1" class="form-label">رمزعبور</label>
+						<input type="password" class="form-control" name="password" placeholder="رمز عبور را وارد کنید"">
+					</div>
+					<button type=" submit" class="btn btn-primary">ورود</button>
+				</form>
+			</div>
+		</center>
+	</div>
+</div>
+{% endblock content %}
