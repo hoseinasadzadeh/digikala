@@ -1,22 +1,26 @@
 {% extends 'base.html' %}
 {% block content %}
 {% load humanize %}
+
 <div class="cartBasket container py-5">
 	<div class="row">
 		<center>
 			<div class="col-lg-8">
 				<div class="card text-center">
 					<div class="card-header">
-						{{message}}
+						لطفا منتظر بمانید
 					</div>
 					<div class="card-body">
-						<p>کد پیگیری: {{ref_id}}</p>
-						<p>شماره سفارش: {{order.id}}</p>
-						<p>مبلغ سفارش: {{order.amount}} تومان</p>
+						<h5 class="card-title">شما در حال انتقال به درگاه پرداخت میباشد ...</h5>
 					</div>
 				</div>
 			</div>
 		</center>
 	</div>
 </div>
+<script>
+	setTimeout(() => {
+		window.location.href = "{{pay_url}}";
+	}, 3000);
+</script>
 {% endblock %}

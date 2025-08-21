@@ -35,9 +35,12 @@
 							<td>{{order.amount|intcomma}} تومان</td>
 							<td><span class="badge rounded-pill 
 											{% if order.status == 'pending' %}text-bg-primary
+											{% elif order.status == 'paid' %}text-bg-success
 											{% elif order.status == 'processing' %}text-bg-info
 											{% elif order.status == 'shipped' %}text-bg-warning
 											{% elif order.status == 'delivered' %}text-bg-success
+											{% elif order.status == 'cancelled' %}text-bg-warning
+											{% elif order.status == 'failed' %}text-bg-info
 											{% else %}text-bg-primary{% endif %}">
 									{{order.get_status_display}}</span>
 							</td>

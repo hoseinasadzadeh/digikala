@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from shop.models import Product
 from django_jalali.db import models as jmodels
 import jdatetime
+import uuid
 
 
 class ShippingAddress(models.Model):
@@ -26,9 +27,12 @@ class Order(models.Model):
 
     STATUS = [
         ('pending', 'در انتظار پرداخت'),
+        ('paid', 'پرداخت شده'),
         ('processing', 'در حال پردازش'),
         ('shipped', 'ارسال شده'),
         ('delivered', 'تحویل داده شده'),
+        ('cancelled', 'لغو شده'),
+        ('failed', 'پرداخت ناموفق'),
     ]
 
     user = models.ForeignKey(
@@ -40,6 +44,7 @@ class Order(models.Model):
     status = models.CharField(max_length=50, choices=STATUS, default='pending')
     date_ordered = jmodels.jDateTimeField(auto_now_add=True)
     last_update = jmodels.jDateTimeField(auto_now=True)
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
     def __str__(self):
         return f'Order #{self.id} - {self.status}'

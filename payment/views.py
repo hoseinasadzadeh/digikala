@@ -5,10 +5,17 @@ from .models import ShippingAddress, Order, OrderItem
 from django.contrib import messages
 from shop.models import Product, Profile
 from django.contrib.auth.models import User
+import requests
+from dotenv import load_dotenv
+import os
+import uuid
+from django.http import HttpResponse, HttpResponseRedirect
 
 
-def success(request):
-    return render(request, 'payment/payment_success.html', {})
+load_dotenv()
+ZARINPAL_MERCHANT = os.getenv('ZARINPAL_MERCHANT')
+ZARINPAL_API = 'https://payment.zarinpal.com/pg/v4/payment/request.json'
+ZARINPAL_VERIFY = 'https://api.zarinpal.com/pg/v4/payment/verify.json'
 
 
 def checkout(request):
@@ -71,70 +78,142 @@ def confirm_order(request):
 
 
 def proccess_order(request):
-    if request.POST:
-        cart = Cart(request)
-        cart_products = cart.get_products()
-        qty = cart.get_quants()
-        total = cart.get_total_price()
+    if request.method == 'POST':
+        try:
+            cart = Cart(request)
+            cart_products = cart.get_products()
+            qty = cart.get_quants()
+            total = cart.get_total_price()
 
-        user_shipping = request.session.get('user_shipping')
+            user_shipping = request.session.get('user_shipping')
+            if not user_shipping:
+                raise ValueError("اطلاعات ارسال یافت نشد")
 
-        full_name = user_shipping['shipping_fullName']
-        email = user_shipping['shipping_email']
-        shipping_address = f"{user_shipping['shipping_country']} - {user_shipping['shipping_city']} - {user_shipping['shipping_state']} - {user_shipping['shipping_address2']} - {user_shipping['shipping_address1']}"
+            order_uuid = str(uuid.uuid4())
 
-        if request.user.is_authenticated:
-            user = request.user
-            order = Order(user=user, fullName=full_name, email=email,
-                          shipping_address=shipping_address, amount=total,)
+            if request.user.is_authenticated:
+                order = Order(
+                    uuid=order_uuid,
+                    user=request.user,
+                    fullName=user_shipping['shipping_fullName'],
+                    email=user_shipping['shipping_email'],
+                    shipping_address=f"{user_shipping['shipping_country']} - {user_shipping['shipping_city']}",
+                    amount=total,
+                    status='pending'
+                )
+            else:
+                order = Order(
+                    uuid=order_uuid,
+                    fullName=user_shipping['shipping_fullName'],
+                    email=user_shipping['shipping_email'],
+                    shipping_address=f"{user_shipping['shipping_country']} - {user_shipping['shipping_city']}",
+                    amount=total,
+                    status='pending'
+                )
             order.save()
 
             for product in cart_products:
                 product_list = get_object_or_404(Product, id=product.id)
+                price = product.sale_price if product.is_sale else product.product_price
 
-                if product.is_sale:
-                    price = product.sale_price
-                else:
-                    price = product.product_price
+                if str(product.id) in qty:
+                    OrderItem.objects.create(
+                        order=order,
+                        product=product_list,
+                        price=price,
+                        quantity=qty[str(product.id)]['qty'],
+                        user=order.user if request.user.is_authenticated else None
+                    )
 
-                for key, value in qty.items():
-                    if int(key) == product.id:
-                        new_item = OrderItem(
-                            order=order, product=product_list, price=price, quantity=value['qty'], user=user)
-                        new_item.save()
+            if request.user.is_authenticated:
+                Profile.objects.filter(user=request.user).update(my_cart='')
             cart.clear()
 
-            current_user = Profile.objects.filter(user__id=request.user.id)
-            current_user.update(my_cart='')
+            CALLBACK_URL = f"http://127.0.0.1:8000/payment/verify/?uuid={order.uuid}"
+            payload = {
+                "merchant_id": ZARINPAL_MERCHANT,
+                "amount": int(total),
+                "currency": "IRT",
+                "callback_url": CALLBACK_URL,
+                "description": f"سفارش شماره {order.id}",
+            }
 
-            messages.success(request, 'سفارش با موفقیت ثبت شد!')
-            return redirect('home')
+            headers = {
+                "accept": "application/json",
+                "content-type": "application/json"
+            }
+
+            response = requests.post(
+                ZARINPAL_API,
+                json=payload,
+                headers=headers
+            )
+            data = response.json()
+
+            if data['data']['code'] == 100:
+                pay_url = f"https://www.zarinpal.com/pg/StartPay/{data['data']['authority']}"
+                return render(request, 'payment/redirecting.html', {'pay_url': pay_url})
+            else:
+                messages.error(request, "خطا در ایجاد تراکنش")
+
+        except Exception as e:
+            messages.error(request, str(e))
+            return redirect('cart_summary')
+
+    messages.error(request, 'دسترسی به این صفحه مجاز نمیباشد!')
+    return redirect('home')
+
+
+def verify_payment(request):
+    authority = request.GET.get('Authority')
+    status = request.GET.get('Status')
+    order_uuid = request.GET.get('uuid')
+
+    try:
+        order = Order.objects.get(uuid=order_uuid)
+
+        if status == 'OK':
+            payload = {
+                "merchant_id": ZARINPAL_MERCHANT,
+                "amount": int(order.amount),
+                "authority": authority
+            }
+
+            headers = {
+                "accept": "application/json",
+                "content-type": "application/json"
+            }
+
+            response = requests.post(
+                ZARINPAL_VERIFY,
+                json=payload,
+                headers=headers
+            )
+
+            data = response.json()
+
+            if data['data']['code'] in [100, 101]:
+                order.status = 'processing'
+                order.save()
+                return render(request, 'payment/payment_success.html', {
+                    'message': "پرداخت با موفقیت انجام شد",
+                    'ref_id': data['data']['ref_id'],
+                    'order': order
+                })
+            else:
+                order.status = 'failed'
+                order.save()
+                return render(request, 'payment/payment_failed.html', {
+                    'message': "خطایی در پرداخت رخ داد",
+                    'order': order
+                })
         else:
-            order = Order(fullName=full_name, email=email,
-                          shipping_address=shipping_address, amount=total,)
+            order.status = 'cancelled'
             order.save()
-            for product in cart_products:
-                product_list = get_object_or_404(Product, id=product.id)
+            return render(request, 'payment/payment_failed.html', {
+                'message': 'پرداخت توسط کاربر لغو شد.',
+            })
 
-                if product.is_sale:
-                    price = product.sale_price
-                else:
-                    price = product.product_price
-
-                for key, value in qty.items():
-                    if int(key) == product.id:
-                        new_item = OrderItem(
-                            order=order, product=product_list, price=price, quantity=value['qty'])
-                        new_item.save()
-
-            cart.clear()
-            messages.success(request, 'سفارش با موفقیت ثبت شد!')
-            return redirect('home')
-
-    else:
-        messages.error(request, 'دسترسی به این صفحه مجاز نمیباشد!')
+    except Order.DoesNotExist:
+        messages.error(request, 'سفارش یافت نشد.')
         return redirect('home')
-
-
-def success(request):
-    return render(request, 'payment/payment_success.html')

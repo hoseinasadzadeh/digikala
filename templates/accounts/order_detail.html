@@ -31,9 +31,12 @@
 							<td>{{order.date_ordered | date:"14y/m/d h:i:s"}}</td>
 							<td><span class="badge rounded-pill 
 											{% if order.status == 'pending' %}text-bg-primary
+											{% elif order.status == 'paid' %}text-bg-success
 											{% elif order.status == 'processing' %}text-bg-info
 											{% elif order.status == 'shipped' %}text-bg-warning
 											{% elif order.status == 'delivered' %}text-bg-success
+											{% elif order.status == 'cancelled' %}text-bg-warning
+											{% elif order.status == 'failed' %}text-bg-info
 											{% else %}text-bg-primary{% endif %}">
 									{{order.get_status_display}}</span>
 							</td>
@@ -58,7 +61,13 @@
 						<tr>
 							<td><img class="img-thumbnail" src="{{item.product.product_image.url}}"></td>
 							<td>{{item.product.product_name}}</td>
-							<td>{{item.product.product_price}}</td>
+							<td>
+								{% if item.product.is_sale %}
+								{{item.product.sale_price}}
+								{% else %}
+								{{item.product.product_price}}
+								{% endif %}
+							</td>
 							<td>{{item.quantity}}</td>
 						</tr>
 						{% endfor %}

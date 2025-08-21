@@ -23,11 +23,15 @@ def cart_add(request):
         product_id = request.POST.get('product_id')
         product_qty = request.POST.get('product_qty')
         product = get_object_or_404(Product, id=product_id)
+        if product.is_sale:
+            last_price = product.sale_price
+        else:
+            last_price = product.product_price
         cart.add(product=product, qty=product_qty)
         cart_quantity = cart.__len__()
         return JsonResponse({
             'product_name': product.product_name,
-            'product_price': product.product_price,
+            'product_price': last_price,
             'cart_quantity': cart_quantity,
             'success': True
         })

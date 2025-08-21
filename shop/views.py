@@ -3,6 +3,7 @@ from . import models
 from django.contrib import messages
 from django.db.models import Q
 
+
 def shopPage(request):
     all_products = models.Product.objects.all()
     return render(request, "shop.html", {"products": all_products})
@@ -18,7 +19,7 @@ def category(request, cat):
     try:
         cat = models.Category.objects.get(tag=cat)
         products = models.Product.objects.filter(product_category=cat)
-        return render(request, "category.html", {"products": products, 'category': category})
+        return render(request, "category.html", {"products": products, 'category': cat})
     except:
         messages.error(request, 'دسته بندی وجود ندارد')
         return redirect('notfound')
@@ -37,7 +38,8 @@ def search(request):
         searchName = request.POST.get('searchName', '').strip()
         has_searched = True
         if searchName:
-            searchProducts = models.Product.objects.filter(Q(product_name__icontains = searchName) | Q(product_describtion__icontains = searchName))
-            return render(request, 'search.html', {'searchProducts': searchProducts,'searchName': searchName,'has_searched': has_searched})
-    
+            searchProducts = models.Product.objects.filter(
+                Q(product_name__icontains=searchName) | Q(product_describtion__icontains=searchName))
+            return render(request, 'search.html', {'searchProducts': searchProducts, 'searchName': searchName, 'has_searched': has_searched})
+
     return render(request, 'search.html', {'has_searched': has_searched})

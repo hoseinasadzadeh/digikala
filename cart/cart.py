@@ -11,10 +11,15 @@ class Cart:
     def add(self, product, qty=0, update=False):
         product_id = str(product.id)
 
+        if product.is_sale:
+            last_price = product.sale_price
+        else:
+            last_price = product.product_price
+
         if product_id not in self.cart or update:
             self.cart[product_id] = {
                 'qty': int(qty),
-                'price': float(product.product_price)
+                'price': float(last_price)
             }
         else:
             self.cart[product_id]['qty'] += int(qty)
@@ -31,10 +36,14 @@ class Cart:
         product_id = str(product.id)
         product = Product.objects.get(id=product_id)
 
+        if product.is_sale:
+            last_price = product.sale_price
+        else:
+            last_price = product.product_price
         if product_id not in self.cart or update:
             self.cart[product_id] = {
                 'qty': int(qty),
-                'price': float(product.product_price)
+                'price': float(last_price)
             }
         else:
             self.cart[product_id]['qty'] += int(qty)

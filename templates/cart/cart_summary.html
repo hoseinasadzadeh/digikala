@@ -40,7 +40,13 @@
 							{% endfor %}
 						</div>
 						<div class="col-md-2 text-end">
-							<p class="fw-bold">{{ product.product_price|intcomma }}</p>
+							<p class="fw-bold">
+								{% if product.is_sale %}
+								{{product.sale_price | intcomma}} تومان
+								{% else %}
+								{{ product.product_price|intcomma }}
+								{% endif %}
+							</p>
 						</div>
 						<div class="col-md-1 text-end">
 							<button class="btn btn-sm btn-outline-danger remove-item"
